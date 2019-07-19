@@ -1,0 +1,979 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "VPC: highly available SSH bastion host/instance, a owlhub template",
+    "Metadata": {
+        "AWS::CloudFormation::Interface": {
+            "ParameterGroups": [
+                {
+                    "Label": {
+                        "default": "Parent Stacks"
+                    },
+                    "Parameters": [
+                        "ParentVPCStack",
+                        "ParentAlertStack",
+                        "ParentZoneStack"
+                    ]
+                },
+                {
+                    "Label": {
+                        "default": "EC2 Parameters"
+                    },
+                    "Parameters": [
+                        "InstanceType",
+                        "KeyName",
+                        "IAMUserSSHAccess",
+                        "SystemsManagerAccess",
+                        "LogsRetentionInDays",
+                        "SubDomainNameWithDot",
+                        "ManagedPolicyArns"
+                    ]
+                }
+            ]
+        },
+        "AWS::CloudFormation::Designer": {
+            "d1431749-29b2-47f2-95d8-3222ea72e860": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": -70,
+                    "y": -60
+                },
+                "z": 0,
+                "embeds": []
+            },
+            "2ff4e502-031b-4f2a-bba5-9001f3469207": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 30,
+                    "y": -60
+                },
+                "z": 0,
+                "embeds": []
+            },
+            "71e79a9a-a93f-44a9-8026-9045e541f03f": {
+                "size": {
+                    "width": 140,
+                    "height": 140
+                },
+                "position": {
+                    "x": -90,
+                    "y": 40
+                },
+                "z": 0,
+                "embeds": []
+            },
+            "42c9e87e-bbdd-457d-8651-52d86d87270a": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 320,
+                    "y": -40
+                },
+                "z": 0,
+                "embeds": []
+            },
+            "cfdfccdd-8b1e-462e-b4ac-04525c33d1ef": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 200,
+                    "y": 70
+                },
+                "z": 0,
+                "embeds": [],
+                "isassociatedwith": [
+                    "9fccc91b-102a-4609-8b79-17eceb425934"
+                ]
+            },
+            "9fccc91b-102a-4609-8b79-17eceb425934": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 100,
+                    "y": 70
+                },
+                "z": 0,
+                "embeds": []
+            },
+            "e24811d0-30e3-4437-b112-1325c52d3880": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 100,
+                    "y": -40
+                },
+                "z": 0,
+                "embeds": [],
+                "isassociatedwith": [
+                    "9fccc91b-102a-4609-8b79-17eceb425934"
+                ]
+            },
+            "b78a2a65-52d3-49be-9c92-03a9dab873b9": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 320,
+                    "y": 70
+                },
+                "z": 0,
+                "embeds": [],
+                "isassociatedwith": [
+                    "42c9e87e-bbdd-457d-8651-52d86d87270a"
+                ]
+            },
+            "eb7278a9-26a2-4115-bbb2-7f37a92849f1": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 440,
+                    "y": 70
+                },
+                "z": 0,
+                "embeds": [],
+                "isassociatedwith": [
+                    "b78a2a65-52d3-49be-9c92-03a9dab873b9"
+                ]
+            },
+            "241bcd8f-7d32-4e50-9089-947967939b45": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 440,
+                    "y": -50
+                },
+                "z": 0,
+                "embeds": []
+            }
+        }
+    },
+    "Parameters": {
+        "ParentVPCStack": {
+            "Description": "Stack name of parent VPC stack based on vpc/vpc-*azs.yaml template.",
+            "Type": "String"
+        },
+        "ParentAlertStack": {
+            "Description": "Optional but recommended stack name of parent alert stack based on operations/alert.yaml template.",
+            "Type": "String",
+            "Default": ""
+        },
+        "ParentZoneStack": {
+            "Description": "Optional stack name of parent zone stack based on vpc/zone-*.yaml template.",
+            "Type": "String",
+            "Default": ""
+        },
+        "KeyName": {
+            "Description": "Optional key pair of the ec2-user to establish a SSH connection to the SSH bastion host/instance.",
+            "Type": "String",
+            "Default": ""
+        },
+        "IAMUserSSHAccess": {
+            "Description": "Synchronize public keys of IAM users to enable personalized SSH access (Doc: https://cloudonaut.io/manage-aws-ec2-ssh-access-with-iam/).",
+            "Type": "String",
+            "Default": false,
+            "AllowedValues": [
+                true,
+                false
+            ]
+        },
+        "SystemsManagerAccess": {
+            "Description": "Enable AWS Systems Manager agent and authorization.",
+            "Type": "String",
+            "Default": true,
+            "AllowedValues": [
+                true,
+                false
+            ]
+        },
+        "InstanceType": {
+            "Description": "Instance type of the SSH bastion host/instance.",
+            "Type": "String",
+            "Default": "t2.nano"
+        },
+        "LogsRetentionInDays": {
+            "Description": "Specifies the number of days you want to retain log events.",
+            "Type": "Number",
+            "Default": 14,
+            "AllowedValues": [
+                1,
+                3,
+                5,
+                7,
+                14,
+                30,
+                60,
+                90,
+                120,
+                150,
+                180,
+                365,
+                400,
+                545,
+                731,
+                1827,
+                3653
+            ]
+        },
+        "SubDomainNameWithDot": {
+            "Description": "Name that is used to create the DNS entry with trailing dot, e.g. §{SubDomainNameWithDot}§{HostedZoneName}. Leave blank for naked (or apex and bare) domain. Requires ParentZoneStack parameter!",
+            "Type": "String",
+            "Default": "ssh."
+        },
+        "ManagedPolicyArns": {
+            "Description": "Optional comma-delimited list of IAM managed policy ARNs to attach to the instance's IAM role",
+            "Type": "String",
+            "Default": ""
+        }
+    },
+    "Mappings": {
+        "RegionMap": {
+            "eu-north-1": {
+                "AMI": "ami-3f36be41"
+            },
+            "ap-south-1": {
+                "AMI": "ami-0d2692b6acea72ee6"
+            },
+            "eu-west-3": {
+                "AMI": "ami-0adcddd3324248c4c"
+            },
+            "eu-west-2": {
+                "AMI": "ami-0d8e27447ec2c8410"
+            },
+            "eu-west-1": {
+                "AMI": "ami-0bbc25e23a7640b9b"
+            },
+            "ap-northeast-2": {
+                "AMI": "ami-095ca789e0549777d"
+            },
+            "ap-northeast-1": {
+                "AMI": "ami-0c3fd0f5d33134a76"
+            },
+            "sa-east-1": {
+                "AMI": "ami-058943e7d9b9cabfb"
+            },
+            "ca-central-1": {
+                "AMI": "ami-0d4ae09ec9361d8ac"
+            },
+            "ap-east-1": {
+                "AMI": "ami-570c7726"
+            },
+            "ap-southeast-1": {
+                "AMI": "ami-01f7527546b557442"
+            },
+            "ap-southeast-2": {
+                "AMI": "ami-0dc96254d5535925f"
+            },
+            "eu-central-1": {
+                "AMI": "ami-0cc293023f983ed53"
+            },
+            "us-east-1": {
+                "AMI": "ami-0b898040803850657"
+            },
+            "us-east-2": {
+                "AMI": "ami-0d8f6eb4f641ef691"
+            },
+            "us-west-1": {
+                "AMI": "ami-056ee704806822732"
+            },
+            "us-west-2": {
+                "AMI": "ami-082b5a644766e0e6f"
+            }
+        }
+    },
+    "Conditions": {
+        "HasKeyName": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "KeyName"
+                        },
+                        ""
+                    ]
+                }
+            ]
+        },
+        "HasIAMUserSSHAccess": {
+            "Fn::Equals": [
+                {
+                    "Ref": "IAMUserSSHAccess"
+                },
+                "true"
+            ]
+        },
+        "HasSystemsManagerAccess": {
+            "Fn::Equals": [
+                {
+                    "Ref": "SystemsManagerAccess"
+                },
+                "true"
+            ]
+        },
+        "HasAlertTopic": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "ParentAlertStack"
+                        },
+                        ""
+                    ]
+                }
+            ]
+        },
+        "HasZone": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "ParentZoneStack"
+                        },
+                        ""
+                    ]
+                }
+            ]
+        },
+        "HasManagedPolicyArns": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "ManagedPolicyArns"
+                        },
+                        ""
+                    ]
+                }
+            ]
+        }
+    },
+    "Resources": {
+        "RecordSet": {
+            "Type": "AWS::Route53::RecordSet",
+            "Properties": {
+                "HostedZoneId": {
+                    "Fn::ImportValue": {
+                        "Fn::Sub": "${ParentZoneStack}-HostedZoneId"
+                    }
+                },
+                "Name": {
+                    "Fn::Sub": [
+                        "${SubDomainNameWithDot}${HostedZoneName}",
+                        {
+                            "SubDomainNameWithDot": {
+                                "Ref": "SubDomainNameWithDot"
+                            },
+                            "HostedZoneName": {
+                                "Fn::ImportValue": {
+                                    "Fn::Sub": "${ParentZoneStack}-HostedZoneName"
+                                }
+                            }
+                        }
+                    ]
+                },
+                "ResourceRecords": [
+                    {
+                        "Ref": "EIP"
+                    }
+                ],
+                "TTL": "60",
+                "Type": "A"
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "d1431749-29b2-47f2-95d8-3222ea72e860"
+                }
+            },
+            "Condition": "HasZone"
+        },
+        "EIP": {
+            "Type": "AWS::EC2::EIP",
+            "Properties": {
+                "Domain": "vpc"
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "2ff4e502-031b-4f2a-bba5-9001f3469207"
+                }
+            }
+        },
+        "Logs": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+                "RetentionInDays": {
+                    "Ref": "LogsRetentionInDays"
+                }
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "71e79a9a-a93f-44a9-8026-9045e541f03f"
+                }
+            }
+        },
+        "SecurityGroup": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": {
+                    "Ref": "AWS::StackName"
+                },
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": 22,
+                        "ToPort": 22,
+                        "CidrIp": "0.0.0.0/0"
+                    }
+                ],
+                "VpcId": {
+                    "Fn::ImportValue": {
+                        "Fn::Sub": "${ParentVPCStack}-VPC"
+                    }
+                }
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "42c9e87e-bbdd-457d-8651-52d86d87270a"
+                }
+            }
+        },
+        "InstanceProfile": {
+            "Type": "AWS::IAM::InstanceProfile",
+            "Properties": {
+                "Roles": [
+                    {
+                        "Ref": "IAMRole"
+                    }
+                ]
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "cfdfccdd-8b1e-462e-b4ac-04525c33d1ef"
+                }
+            }
+        },
+        "IAMRole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": "ec2.amazonaws.com"
+                            },
+                            "Action": "sts:AssumeRole"
+                        }
+                    ]
+                },
+                "ManagedPolicyArns": {
+                    "Fn::If": [
+                        "HasManagedPolicyArns",
+                        {
+                            "Fn::Split": [
+                                ",",
+                                {
+                                    "Ref": "ManagedPolicyArns"
+                                }
+                            ]
+                        },
+                        {
+                            "Ref": "AWS::NoValue"
+                        }
+                    ]
+                },
+                "Policies": [
+                    {
+                        "Fn::If": [
+                            "HasSystemsManagerAccess",
+                            {
+                                "PolicyName": "ssm",
+                                "PolicyDocument": {
+                                    "Version": "2012-10-17",
+                                    "Statement": [
+                                        {
+                                            "Effect": "Allow",
+                                            "Action": [
+                                                "ssmmessages:*",
+                                                "ssm:UpdateInstanceInformation",
+                                                "ec2messages:*"
+                                            ],
+                                            "Resource": "*"
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                "Ref": "AWS::NoValue"
+                            }
+                        ]
+                    },
+                    {
+                        "PolicyName": "ec2",
+                        "PolicyDocument": {
+                            "Version": "2012-10-17",
+                            "Statement": [
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "ec2:AssociateAddress"
+                                    ],
+                                    "Resource": [
+                                        "*"
+                                    ]
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "PolicyName": "logs",
+                        "PolicyDocument": {
+                            "Version": "2012-10-17",
+                            "Statement": [
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "logs:CreateLogGroup",
+                                        "logs:CreateLogStream",
+                                        "logs:PutLogEvents",
+                                        "logs:DescribeLogStreams"
+                                    ],
+                                    "Resource": {
+                                        "Fn::GetAtt": [
+                                            "Logs",
+                                            "Arn"
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "9fccc91b-102a-4609-8b79-17eceb425934"
+                }
+            }
+        },
+        "IAMPolicySSHAccess": {
+            "Type": "AWS::IAM::Policy",
+            "Properties": {
+                "Roles": [
+                    {
+                        "Ref": "IAMRole"
+                    }
+                ],
+                "PolicyName": "iam",
+                "PolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Action": [
+                                "iam:ListUsers"
+                            ],
+                            "Resource": [
+                                "*"
+                            ]
+                        },
+                        {
+                            "Effect": "Allow",
+                            "Action": [
+                                "iam:ListSSHPublicKeys",
+                                "iam:GetSSHPublicKey"
+                            ],
+                            "Resource": [
+                                {
+                                    "Fn::Sub": "arn:aws:iam::${AWS::AccountId}:user/*"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "e24811d0-30e3-4437-b112-1325c52d3880"
+                }
+            },
+            "Condition": "HasIAMUserSSHAccess"
+        },
+        "LaunchConfiguration": {
+            "Type": "AWS::AutoScaling::LaunchConfiguration",
+            "Properties": {
+                "AssociatePublicIpAddress": true,
+                "EbsOptimized": false,
+                "IamInstanceProfile": {
+                    "Ref": "InstanceProfile"
+                },
+                "ImageId": {
+                    "Fn::FindInMap": [
+                        "RegionMap",
+                        {
+                            "Ref": "AWS::Region"
+                        },
+                        "AMI"
+                    ]
+                },
+                "InstanceType": {
+                    "Ref": "InstanceType"
+                },
+                "SecurityGroups": [
+                    {
+                        "Ref": "SecurityGroup"
+                    }
+                ],
+                "KeyName": {
+                    "Fn::If": [
+                        "HasKeyName",
+                        {
+                            "Ref": "KeyName"
+                        },
+                        {
+                            "Ref": "AWS::NoValue"
+                        }
+                    ]
+                },
+                "UserData": {
+                    "Fn::Base64": {
+                        "Fn::Sub": "#!/bin/bash -ex\ntrap '/opt/aws/bin/cfn-signal -e 1 --stack ${AWS::StackName} --resource AutoScalingGroup --region ${AWS::Region}' ERR\nINSTANCEID=$(curl -s -m 60 http://169.254.169.254/latest/meta-data/instance-id)\naws --region ${AWS::Region} ec2 associate-address --instance-id $INSTANCEID --allocation-id ${EIP.AllocationId}\n/opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource LaunchConfiguration --region ${AWS::Region}\n/opt/aws/bin/cfn-signal -e 0 --stack ${AWS::StackName} --resource AutoScalingGroup --region ${AWS::Region}\n"
+                    }
+                }
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Init": {
+                    "configSets": {
+                        "default": {
+                            "Fn::If": [
+                                "HasIAMUserSSHAccess",
+                                [
+                                    "awslogs",
+                                    "ssh-access",
+                                    "config"
+                                ],
+                                [
+                                    "awslogs",
+                                    "config"
+                                ]
+                            ]
+                        }
+                    },
+                    "awslogs": {
+                        "packages": {
+                            "yum": {
+                                "awslogs": []
+                            }
+                        },
+                        "files": {
+                            "/etc/awslogs/awscli.conf": {
+                                "content": {
+                                    "Fn::Sub": "[default]\nregion = ${AWS::Region}\n[plugins]\ncwlogs = cwlogs\n"
+                                },
+                                "mode": "000644",
+                                "owner": "root",
+                                "group": "root"
+                            },
+                            "/etc/awslogs/awslogs.conf": {
+                                "content": {
+                                    "Fn::Sub": "[general]\nstate_file = /var/lib/awslogs/agent-state\n[/var/log/amazon/ssm/amazon-ssm-agent.log]\ndatetime_format = %Y-%m-%d %H:%M:%S\nfile = /var/log/amazon/ssm/amazon-ssm-agent.log\nlog_stream_name = {instance_id}/var/log/amazon/ssm/amazon-ssm-agent.log\nlog_group_name = ${Logs}\n[/var/log/amazon/ssm/errors.log]\ndatetime_format = %Y-%m-%d %H:%M:%S\nfile = /var/log/amazon/ssm/errors.log\nlog_stream_name = {instance_id}/var/log/amazon/ssm/errors.log\nlog_group_name = ${Logs}\n[/var/log/audit/audit.log]\nfile = /var/log/audit/audit.log\nlog_stream_name = {instance_id}/var/log/audit/audit.log\nlog_group_name = ${Logs}\n[/var/log/awslogs.log]\ndatetime_format = %Y-%m-%d %H:%M:%S\nfile = /var/log/awslogs.log\nlog_stream_name = {instance_id}/var/log/awslogs.log\nlog_group_name = ${Logs}\n[/var/log/boot.log]\nfile = /var/log/boot.log\nlog_stream_name = {instance_id}/var/log/boot.log\nlog_group_name = ${Logs}\n[/var/log/cfn-hup.log]\ndatetime_format = %Y-%m-%d %H:%M:%S\nfile = /var/log/cfn-hup.log\nlog_stream_name = {instance_id}/var/log/cfn-hup.log\nlog_group_name = ${Logs}\n[/var/log/cfn-init-cmd.log]\ndatetime_format = %Y-%m-%d %H:%M:%S\nfile = /var/log/cfn-init-cmd.log\nlog_stream_name = {instance_id}/var/log/cfn-init-cmd.log\nlog_group_name = ${Logs}\n[/var/log/cfn-init.log]\ndatetime_format = %Y-%m-%d %H:%M:%S\nfile = /var/log/cfn-init.log\nlog_stream_name = {instance_id}/var/log/cfn-init.log\nlog_group_name = ${Logs}\n[/var/log/cfn-wire.log]\ndatetime_format = %Y-%m-%d %H:%M:%S\nfile = /var/log/cfn-wire.log\nlog_stream_name = {instance_id}/var/log/cfn-wire.log\nlog_group_name = ${Logs}\n[/var/log/cloud-init-output.log]\nfile = /var/log/cloud-init-output.log\nlog_stream_name = {instance_id}/var/log/cloud-init-output.log\nlog_group_name = ${Logs}\n[/var/log/cloud-init.log]\ndatetime_format = %b %d %H:%M:%S\nfile = /var/log/cloud-init.log\nlog_stream_name = {instance_id}/var/log/cloud-init.log\nlog_group_name = ${Logs}\n[/var/log/cron]\ndatetime_format = %b %d %H:%M:%S\nfile = /var/log/cron\nlog_stream_name = {instance_id}/var/log/cron\nlog_group_name = ${Logs}\n[/var/log/dmesg]\nfile = /var/log/dmesg\nlog_stream_name = {instance_id}/var/log/dmesg\nlog_group_name = ${Logs}\n[/var/log/grubby_prune_debug]\nfile = /var/log/grubby_prune_debug\nlog_stream_name = {instance_id}/var/log/grubby_prune_debug\nlog_group_name = ${Logs}\n[/var/log/maillog]\ndatetime_format = %b %d %H:%M:%S\nfile = /var/log/maillog\nlog_stream_name = {instance_id}/var/log/maillog\nlog_group_name = ${Logs}\n[/var/log/messages]\ndatetime_format = %b %d %H:%M:%S\nfile = /var/log/messages\nlog_stream_name = {instance_id}/var/log/messages\nlog_group_name = ${Logs}\n[/var/log/secure]\ndatetime_format = %b %d %H:%M:%S\nfile = /var/log/secure\nlog_stream_name = {instance_id}/var/log/secure\nlog_group_name = ${Logs}\n[/var/log/yum.log]\ndatetime_format = %b %d %H:%M:%S\nfile = /var/log/yum.log\nlog_stream_name = {instance_id}/var/log/yum.log\nlog_group_name = ${Logs}\n"
+                                },
+                                "mode": "000644",
+                                "owner": "root",
+                                "group": "root"
+                            }
+                        },
+                        "services": {
+                            "sysvinit": {
+                                "awslogsd": {
+                                    "enabled": true,
+                                    "ensureRunning": true,
+                                    "packages": {
+                                        "yum": [
+                                            "awslogs"
+                                        ]
+                                    },
+                                    "files": [
+                                        "/etc/awslogs/awslogs.conf",
+                                        "/etc/awslogs/awscli.conf"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "ssh-access": {
+                        "files": {
+                            "/opt/authorized_keys_command.sh": {
+                                "content": "#!/bin/bash -e\nif [ -z \"$1\" ]; then\n  exit 1\nfi\nUnsaveUserName=\"$1\"\nUnsaveUserName=${UnsaveUserName//\".plus.\"/\"+\"}\nUnsaveUserName=${UnsaveUserName//\".equal.\"/\"=\"}\nUnsaveUserName=${UnsaveUserName//\".comma.\"/\",\"}\nUnsaveUserName=${UnsaveUserName//\".at.\"/\"@\"}\naws iam list-ssh-public-keys --user-name \"$UnsaveUserName\" --query \"SSHPublicKeys[?Status == 'Active'].[SSHPublicKeyId]\" --output text | while read -r KeyId; do\n  aws iam get-ssh-public-key --user-name \"$UnsaveUserName\" --ssh-public-key-id \"$KeyId\" --encoding SSH --query \"SSHPublicKey.SSHPublicKeyBody\" --output text\ndone\n",
+                                "mode": "000755",
+                                "owner": "root",
+                                "group": "root"
+                            },
+                            "/opt/import_users.sh": {
+                                "content": "#!/bin/bash -e\naws iam list-users --query \"Users[].[UserName]\" --output text | while read User; do\n  SaveUserName=\"$User\"\n  SaveUserName=${SaveUserName//\"+\"/\".plus.\"}\n  SaveUserName=${SaveUserName//\"=\"/\".equal.\"}\n  SaveUserName=${SaveUserName//\",\"/\".comma.\"}\n  SaveUserName=${SaveUserName//\"@\"/\".at.\"}\n  if [ \"${#SaveUserName}\" -le \"32\" ]; then\n    if ! id -u \"$SaveUserName\" > /dev/null 2>&1; then\n      # don't grant sudo rights on bastion host!\n      /usr/sbin/useradd \"$SaveUserName\"\n    fi\n  else\n    echo \"Can not import IAM user ${SaveUserName}. User name is longer than 32 characters.\"\n  fi\ndone\n",
+                                "mode": "000755",
+                                "owner": "root",
+                                "group": "root"
+                            },
+                            "/etc/cron.d/import_users": {
+                                "content": "*/10 * * * * root /opt/import_users.sh\n",
+                                "mode": "000644",
+                                "owner": "root",
+                                "group": "root"
+                            }
+                        },
+                        "commands": {
+                            "a_configure_sshd_command": {
+                                "command": "sed -e '/AuthorizedKeysCommand / s/^#*/#/' -i /etc/ssh/sshd_config; echo -e '\\nAuthorizedKeysCommand /opt/authorized_keys_command.sh' >> /etc/ssh/sshd_config",
+                                "test": "! grep -q '^AuthorizedKeysCommand /opt/authorized_keys_command.sh' /etc/ssh/sshd_config"
+                            },
+                            "b_configure_sshd_commanduser": {
+                                "command": "sed -e '/AuthorizedKeysCommandUser / s/^#*/#/' -i /etc/ssh/sshd_config; echo -e '\\nAuthorizedKeysCommandUser nobody' >> /etc/ssh/sshd_config",
+                                "test": "! grep -q '^AuthorizedKeysCommandUser nobody' /etc/ssh/sshd_config"
+                            },
+                            "c_import_users": {
+                                "command": "./import_users.sh",
+                                "cwd": "/opt"
+                            }
+                        },
+                        "services": {
+                            "sysvinit": {
+                                "sshd": {
+                                    "enabled": true,
+                                    "ensureRunning": true,
+                                    "commands": [
+                                        "a_configure_sshd_command",
+                                        "b_configure_sshd_commanduser"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "config": {
+                        "packages": {
+                            "yum": {
+                                "mariadb": []
+                            }
+                        },
+                        "files": {
+                            "/etc/cfn/cfn-hup.conf": {
+                                "content": {
+                                    "Fn::Sub": "[main]\nstack=${AWS::StackId}\nregion=${AWS::Region}\ninterval=1\n"
+                                },
+                                "mode": "000400",
+                                "owner": "root",
+                                "group": "root"
+                            },
+                            "/etc/cfn/hooks.d/cfn-auto-reloader.conf": {
+                                "content": {
+                                    "Fn::Sub": "[cfn-auto-reloader-hook]\ntriggers=post.update\npath=Resources.LaunchConfiguration.Metadata.AWS::CloudFormation::Init\naction=/opt/aws/bin/cfn-init --verbose --stack=${AWS::StackName} --region=${AWS::Region} --resource=LaunchConfiguration\nrunas=root\n"
+                                }
+                            }
+                        },
+                        "services": {
+                            "sysvinit": {
+                                "cfn-hup": {
+                                    "enabled": true,
+                                    "ensureRunning": true,
+                                    "files": [
+                                        "/etc/cfn/cfn-hup.conf",
+                                        "/etc/cfn/hooks.d/cfn-auto-reloader.conf"
+                                    ]
+                                },
+                                "amazon-ssm-agent": {
+                                    "enabled": {
+                                        "Fn::If": [
+                                            "HasSystemsManagerAccess",
+                                            true,
+                                            false
+                                        ]
+                                    },
+                                    "ensureRunning": {
+                                        "Fn::If": [
+                                            "HasSystemsManagerAccess",
+                                            true,
+                                            false
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "AWS::CloudFormation::Designer": {
+                    "id": "b78a2a65-52d3-49be-9c92-03a9dab873b9"
+                }
+            }
+        },
+        "AutoScalingGroup": {
+            "Type": "AWS::AutoScaling::AutoScalingGroup",
+            "Properties": {
+                "LaunchConfigurationName": {
+                    "Ref": "LaunchConfiguration"
+                },
+                "MaxSize": "1",
+                "MinSize": "1",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub": [
+                                "SSH bastion host/instance ${CidrBlock}",
+                                {
+                                    "CidrBlock": {
+                                        "Fn::ImportValue": {
+                                            "Fn::Sub": "${ParentVPCStack}-CidrBlock"
+                                        }
+                                    }
+                                }
+                            ]
+                        },
+                        "PropagateAtLaunch": true
+                    }
+                ],
+                "NotificationConfigurations": {
+                    "Fn::If": [
+                        "HasAlertTopic",
+                        [
+                            {
+                                "NotificationTypes": [
+                                    "autoscaling:EC2_INSTANCE_LAUNCH_ERROR",
+                                    "autoscaling:EC2_INSTANCE_TERMINATE_ERROR"
+                                ],
+                                "TopicARN": {
+                                    "Fn::ImportValue": {
+                                        "Fn::Sub": "${ParentAlertStack}-TopicARN"
+                                    }
+                                }
+                            }
+                        ],
+                        []
+                    ]
+                },
+                "VPCZoneIdentifier": {
+                    "Fn::Split": [
+                        ",",
+                        {
+                            "Fn::ImportValue": {
+                                "Fn::Sub": "${ParentVPCStack}-SubnetsPublic"
+                            }
+                        }
+                    ]
+                }
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "eb7278a9-26a2-4115-bbb2-7f37a92849f1"
+                }
+            },
+            "CreationPolicy": {
+                "ResourceSignal": {
+                    "Count": 1,
+                    "Timeout": "PT10M"
+                }
+            },
+            "UpdatePolicy": {
+                "AutoScalingRollingUpdate": {
+                    "PauseTime": "PT10M",
+                    "SuspendProcesses": [
+                        "HealthCheck",
+                        "ReplaceUnhealthy",
+                        "AZRebalance",
+                        "AlarmNotification",
+                        "ScheduledActions"
+                    ],
+                    "WaitOnResourceSignals": true
+                }
+            }
+        },
+        "CPUTooHighAlarm": {
+            "Type": "AWS::CloudWatch::Alarm",
+            "Properties": {
+                "AlarmDescription": "Average CPU utilization over last 10 minutes higher than 80%",
+                "Namespace": "AWS/EC2",
+                "MetricName": "CPUUtilization",
+                "Statistic": "Average",
+                "Period": 600,
+                "EvaluationPeriods": 1,
+                "ComparisonOperator": "GreaterThanThreshold",
+                "Threshold": 80,
+                "AlarmActions": [
+                    {
+                        "Fn::ImportValue": {
+                            "Fn::Sub": "${ParentAlertStack}-TopicARN"
+                        }
+                    }
+                ],
+                "Dimensions": [
+                    {
+                        "Name": "AutoScalingGroupName",
+                        "Value": {
+                            "Ref": "AutoScalingGroup"
+                        }
+                    }
+                ]
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "241bcd8f-7d32-4e50-9089-947967939b45"
+                }
+            },
+            "Condition": "HasAlertTopic"
+        }
+    },
+    "Outputs": {
+        "TemplateID": {
+            "Description": "owlhub template id.",
+            "Value": "vpc/vpc-ssh-bastion"
+        },
+        "TemplateVersion": {
+            "Description": "owlhub template version.",
+            "Value": "1.0.0"
+        },
+        "StackName": {
+            "Description": "Stack name.",
+            "Value": {
+                "Fn::Sub": "${AWS::StackName}"
+            }
+        },
+        "SecurityGroup": {
+            "Description": "Use this Security Group to reference incoming traffic from the SSH bastion host/instance.",
+            "Value": {
+                "Ref": "SecurityGroup"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-SecurityGroup"
+                }
+            }
+        },
+        "IPAddress": {
+            "Description": "The public IP address of the SSH bastion host/instance.",
+            "Value": {
+                "Ref": "EIP"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-IPAddress"
+                }
+            }
+        }
+    }
+}
