@@ -182,7 +182,7 @@
         },
         "KeyName": {
             "Description": "Optional key pair of the ec2-user to establish a SSH connection to the SSH bastion host/instance.",
-            "Type": "String",
+            "Type": "AWS::EC2::KeyPair::KeyName",
             "Default": ""
         },
         "IAMUserSSHAccess": {
