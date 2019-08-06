@@ -43,7 +43,7 @@ Metadata:
           - ContainerExcessThreshold
 Parameters:
   ParentVPCStack:
-    Description: Stack name of the parent VPC stack based on vpc/vpc-*azs.yml template
+    Description: 'Stack name of the parent VPC stack based on vpc/vpc-*azs.yml template.'
     Type: String
   ParentSSHBastionStack:
     Description: 'Optional but recommended stack name of parent SSH bastion host/instance stack based on vpc/vpc-*-bastion.yaml template.'
@@ -54,9 +54,7 @@ Parameters:
     Type: String
     Default: ''
   ParentAlertStack:
-    Description: >-
-      Options but recommended stack name of parent alert stack based on
-      operations/alert.yml template
+    Description: 'Options but recommended stack name of parent alert stack based on operations/alert.yml template.'
     Type: String
     Default: ''
   ParentS3StackAccessLog:
@@ -64,9 +62,9 @@ Parameters:
     Type: String
     Default: ''
   KeyName:
-    Description: Name of an existing EC2 KeyPair to enable SSH access to the instances
+    Description: 'Name of an existing EC2 KeyPair to enable SSH access to the instances.'
     Type: 'AWS::EC2::KeyPair::KeyName'
-    ConstraintDescription: must be the name of an existing EC2 KeyPair
+    ConstraintDescription: 'Must be the name of an existing EC2 KeyPair.'
   IAMUserSSHAccess:
     Description: 'Synchronize public keys of IAM users to enable parsonalized SSH access (Doc: https://cloudonaut.io/manage-aws-ec2-ssh-access-with-iam/).'
     Type: String
@@ -75,7 +73,7 @@ Parameters:
       - true
       - false
   SystemsManagerAccess:
-    Description: Enable AWS Systems Manager agent and authorization.
+    Description: 'Enable AWS Systems Manager agent and authorization.'
     Type: String
     Default: true
     AllowedValues:
@@ -94,7 +92,7 @@ Parameters:
     Default: 'internet-facing'
     AllowedValues:
     - 'internet-facing'
-    - internal
+    - 'internal'
   LoadBalancerCertificateArn:
     Description: 'Optional Amazon Resource Name (ARN) of the certificate to associate with the load balancer.'
     Type: String
@@ -123,11 +121,9 @@ Parameters:
       - t3.large
       - t3.xlarge
       - t3.2xlarge
-    ConstraintDescription: must be a valid EC2 instance type.
+    ConstraintDescription: 'Must be a valid EC2 instance type.'
   LogsRetentionInDays:
-    Description: >-
-      Specifies the number of days you want to retain log events in the
-      specified log group.
+    Description: 'Specifies the number of days you want to retain log events in the specified log group.'
     Type: Number
     Default: 14
     AllowedValues:
@@ -203,15 +199,10 @@ Parameters:
   LatestAmiId:
     Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
     Default: /aws/service/ecs/optimized-ami/amazon-linux-2/recommended/image_id
-Mappings: {}
 Conditions:
   HasKeyName: !Not [!Equals [!Ref KeyName, '']]
-  HasIAMUserSSHAccess: !Equals 
-    - !Ref IAMUserSSHAccess
-    - 'true'
-  HasSystemsManagerAccess: !Equals
-    - !Ref SystemsManagerAccess
-    - 'true'
+  HasIAMUserSSHAccess: !Equals [!Ref IAMUserSSHAccess, 'true']
+  HasSystemsManagerAccess: !Equals [!Ref SystemsManagerAccess, 'true']
   HasSSHBastionSecurityGroup: !Not [!Equals [!Ref ParentSSHBastionStack, '']]
   HasNotSSHBastionSecurityGroup: !Equals [!Ref ParentSSHBastionStack, '']
   HasAuthProxySecurityGroup: !Not [!Equals [!Ref ParentAuthProxyStack, '']]
@@ -284,8 +275,7 @@ Resources:
                   - 'ecs:SubmitTaskStateChange'
                   - 'ecs:ListContainerInstances'
                 Resource:
-                  - !Sub >-
-                    arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:cluster/${Cluster}
+                  - !Sub 'arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:cluster/${Cluster}'
         - PolicyName: ecs-cluster-instance
           PolicyDocument:
             Version: 2012-10-17
@@ -297,12 +287,11 @@ Resources:
                   - 'ecs:UpdateContainerInstancesState'
                   - 'ecs:ListTasks'
                   - 'ecs:DescribeContainerInstances'
-                Resource: !Sub >-
-                  arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:container-instance/*
+                Resource:
+                  - !Sub 'arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:container-instance/*'
                 Condition:
                   StringEquals:
-                    'ecs:cluster': !Sub >-
-                      arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:cluster/${Cluster}
+                    'ecs:cluster': !Sub 'arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:cluster/${Cluster}'
         - PolicyName: ecr
           PolicyDocument:
             Version: 2012-10-17
@@ -325,9 +314,7 @@ Resources:
                   - 'logs:CreateLogStream'
                   - 'logs:PutLogEvents'
                   - 'logs:DescribeLogStreams'
-                Resource: !GetAtt 
-                  - LogGroup
-                  - Arn
+                Resource: !GetAtt LogGroup.Arn
   IAMPolicySSHAccess:
     Type: 'AWS::IAM::Policy'
     Condition: HasIAMUserSSHAccess
@@ -432,7 +419,7 @@ Resources:
       ComparisonOperator: GreaterThanThreshold
       Threshold: 0
       AlarmActions:
-      - {'Fn::ImportValue': !Sub '${ParentAlertStack}-TopicARN'}
+        - {'Fn::ImportValue': !Sub '${ParentAlertStack}-TopicARN'}
       Dimensions:
       - Name: LoadBalancer
         Value: !GetAtt 'LoadBalancer.LoadBalancerFullName'
@@ -922,8 +909,8 @@ Resources:
           - Sid: write
             Effect: Allow
             Action:
-            - 'sqs:SendMessage'
-            - 'sqs:GetQueueUrl'
+              - 'sqs:SendMessage'
+              - 'sqs:GetQueueUrl'
             Resource: !GetAtt 'AutoScalingGroupLifecycleHookQueue.Arn'
   AutoScalingGroupTerminatingLifecycleHook:
     Type: 'AWS::AutoScaling::LifecycleHook'
