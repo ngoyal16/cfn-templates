@@ -1,0 +1,35 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: 'Batch: compute-environment, a owlhub.io template'
+Resources:
+  AWSBatchServiceRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: batch.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSBatchServiceRole'
+      Path: '/service-role/'
+  ComputeEnvironment:
+    Type: 'AWS::Batch::ComputeEnvironment'
+    Properties:
+      State: 'ENABLED'
+      Type: 'UNMANAGED'
+      ServiceRole: !GetAtt
+        - AWSBatchServiceRole
+        - Arn
+Outputs:
+  TemplateID:
+    Description: 'owlhub.io template id.'
+    Value: 'batch/compute-environment'
+  TemplateVersion:
+    Description: 'owlhub.io template version.'
+    Value: '0.0.1'
+  StackName:
+    Description: 'Stack name.'
+    Value: !Sub '${AWS::StackName}'
