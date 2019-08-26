@@ -1,0 +1,21 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: 'ECR: repository, a owlhub.io template'
+Parameters:
+  RepositoryName:
+    Description: 'Repository name for your ecr repository'
+    Type: String
+Resources:
+  Repository:
+    Type: 'AWS::ECR::Repository'
+    Properties:
+        RepositoryName: !Ref RepositoryName
+Outputs:
+  TemplateID:
+    Description: 'owlhub.io template id.'
+    Value: 'ecr/repository'
+  TemplateVersion:
+    Description: 'owlhub.io template version.'
+    Value: '0.0.1'
+  StackName:
+    Description: 'Stack Name.'
+    Value: !Sub '${AWS::StackName}'
